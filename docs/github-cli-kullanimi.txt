@@ -1,0 +1,185 @@
+========================================================
+  GITHUB CLI (gh) KULLANIM KILAVUZU
+  OnlineSMMM Projesi - GurSoft
+  Tarih: 2026-07-08
+========================================================
+
+BU DOSYADA NE VAR?
+------------------
+Bu dosya, AI ajanın (Antigravity/Gemini) GitHub CLI'yi nasıl kullandığını,
+hangi komutları çalıştırdığını ve hangi sorunlarla karşılaştığını anlatır.
+Başka bir AI model bunu yapamıyorsa, bu adımları manuel uygulayabilirsin.
+
+
+1. KURULUM VE DOĞRULAMA
+-----------------------
+
+GitHub CLI'nin kurulu olup olmadığını ve hangi hesapla giriş yapıldığını
+görmek için:
+
+  gh --version
+  gh auth status
+
+ÇIKTI ÖRNEĞİ (bu projede alınan çıktı):
+  gh version 2.88.0 (2026-03-10)
+  github.com
+    ✓ Logged in to github.com account wosgamer2025-dotcom (keyring)
+    - Active account: true
+    - Git operations protocol: https
+    - Token scopes: 'gist', 'read:org', 'repo'
+
+SORUN: "gh" komutu bulunamıyor
+  → GitHub CLI'yi https://cli.github.com adresinden indir ve kur.
+  → Kurulduktan sonra "gh auth login" ile giriş yap.
+
+SORUN: Windows'ta "gh" çalışmıyor, hata veriyor:
+  ParserError: Unexpected token 'multicall'...
+
+  NEDEN OLUYOR?
+  Antigravity CLI'nin kendi "gh" sürümü var (agy.exe üzerinden multicall).
+  Bu, orijinal GitHub CLI'nin önüne geçiyor.
+
+  ÇÖZÜM: Tam yolu kullan:
+    & "C:\Program Files\GitHub CLI\gh.exe" auth status
+    & "C:\Program Files\GitHub CLI\gh.exe" repo create ...
+
+  veya PowerShell'de PATH'i geçici olarak düzelt:
+    $env:PATH = "C:\Program Files\GitHub CLI;" + $env:PATH
+    gh auth status
+
+
+2. GITHUB REPO OLUŞTURMA
+-------------------------
+
+Proje klasörü zaten varken sıfırdan GitHub'da repo oluşturmak için:
+
+  gh repo create OnlineSMMM --public --description "Açıklama buraya"
+
+veya tam yolu ile:
+  & "C:\Program Files\GitHub CLI\gh.exe" repo create OnlineSMMM --public --description "GurSoft Online SMMM Platformu"
+
+ÇIKTI:
+  https://github.com/wosgamer2025-dotcom/OnlineSMMM
+
+Parametreler:
+  --public   → Herkese açık repo
+  --private  → Özel repo
+  --description "..." → Repo açıklaması
+
+SORUN: "Repository already exists"
+  → Repo zaten var demek. Direkt adım 3'e geç (remote ekle).
+
+
+3. LOCAL PROJE HAZIRLIĞI (İLK KEZ GİTHUB'A AKTARMA)
+-----------------------------------------------------
+
+Proje klasöründe henüz git yoksa veya hiç commit yoksa:
+
+  cd Z:\WebProje\onlinesmmm
+
+  # Git durumunu kontrol et
+  git log --oneline -5
+  git status --short
+  git remote -v
+
+  # Remote ekle
+  git remote add origin https://github.com/wosgamer2025-dotcom/OnlineSMMM.git
+
+  # Dosyaları ekle
+  git add -A
+
+  # İlk commit
+  git commit -m "feat: ilk commit - proje açıklaması"
+
+  # Push et
+  git push -u origin master
+
+"-u" bayrağı: upstream olarak ayarlar, bir sonraki "git push" için
+branch belirtmene gerek kalmaz.
+
+
+4. .GITIGNORE ÖNEMLİ
+---------------------
+
+GitHub'a gereksiz dosyaları yüklememeyi sağlar.
+Bu projede şunlar hariç tutuldu:
+
+  node_modules     → npm install ile yeniden oluşturulur (çok büyük)
+  .env             → Gizli anahtarlar (ASLA yükleme!)
+  .tmp/            → Geçici dosyalar (Chrome profile, tar.gz arşivler)
+  *.log            → Log dosyaları
+  *.zip / *.tar.gz → Büyük arşivler
+  *.png / *.jpg    → Binary görsel dosyalar (boyutu büyütür)
+  tmp-*            → Geçici ekran görüntüleri
+  deploy-*.cjs     → VPS'e özgü deploy scriptleri
+  out.js           → Build çıktısı
+
+ÖNEMLİ NOT: dist/ klasörü normalde hariç tutulur (.gitignore'da vardı),
+ama Cloudflare Pages deploy için GitHub'dan okumak istediğimizde
+dist/ klasörünü GitHub'a dahil ettik (satırı yorum satırına aldık):
+
+  # dist - Cloudflare Pages için GitHub'da tutuyoruz
+  # dist
+
+SORUN: .tmp/ klasörü git add -A ile eklendi
+  → .gitignore'a ".tmp" ekle
+  → "git rm -r --cached .tmp" ile cache'den kaldır
+  → Sonra tekrar "git add -A" yap
+
+SORUN: Büyük dosya yükleme hatası (100MB+)
+  → GitHub 100MB üzerindeki dosyaları reddeder
+  → .gitignore'a ekleyip "git rm --cached <dosya>" yap
+  → Git LFS kullanmak gerekebilir (büyük binary için)
+
+
+5. SONRAKI COMMITLER
+--------------------
+
+Değişiklik yaptıktan sonra GitHub'a göndermek için:
+
+  git add -A
+  git commit -m "değişiklik açıklaması"
+  git push
+
+Yeni branch oluşturmak için:
+  git checkout -b feature/yeni-ozellik
+  git push -u origin feature/yeni-ozellik
+
+
+6. ÖZET KOMUT SIRASI (BU PROJEde YAPILAN)
+------------------------------------------
+
+  1. & "C:\Program Files\GitHub CLI\gh.exe" auth status
+     → wosgamer2025-dotcom hesabıyla giriş doğrulandı
+
+  2. & "C:\Program Files\GitHub CLI\gh.exe" repo create OnlineSMMM --public --description "..."
+     → https://github.com/wosgamer2025-dotcom/OnlineSMMM oluşturuldu
+
+  3. .gitignore güncellendi (node_modules, .tmp, büyük dosyalar hariç)
+
+  4. git remote add origin https://github.com/wosgamer2025-dotcom/OnlineSMMM.git
+
+  5. git add -A
+
+  6. git commit -m "feat: ilk commit - GurSoft OnlineSMMM platformu"
+     → 91 dosya commit edildi
+
+  7. git push -u origin master
+     → Push başarılı
+
+
+7. FAYDALI GH KOMUTLARI
+------------------------
+
+  gh repo list                    → Tüm repolarını listele
+  gh repo view                    → Mevcut repoyu göster
+  gh repo clone <repo>            → Repo klonla
+  gh pr create                    → Pull request oluştur
+  gh issue create                 → Issue oluştur
+  gh release create v1.0.0        → Release oluştur
+
+
+========================================================
+  Oluşturan: Antigravity AI (Google DeepMind)
+  Proje: OnlineSMMM / GurSoft
+========================================================

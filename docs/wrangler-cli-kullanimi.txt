@@ -1,0 +1,223 @@
+========================================================
+  WRANGLER CLI - CLOUDFLARE PAGES KULLANIM KILAVUZU
+  OnlineSMMM Projesi - GurSoft
+  Tarih: 2026-07-08
+========================================================
+
+BU DOSYADA NE VAR?
+------------------
+Bu dosya, AI ajanın Wrangler CLI ile Cloudflare Pages'i nasıl kullandığını,
+hangi komutları çalıştırdığını ve sorunları nasıl çözdüğünü anlatır.
+
+
+1. WRANGLER NEDİR?
+------------------
+
+Wrangler, Cloudflare'in resmi CLI aracıdır.
+  - Cloudflare Workers deploy etmek için kullanılır
+  - Cloudflare Pages deploy etmek için kullanılır (biz bunu kullandık)
+  - KV, R2, D1 gibi Cloudflare servislerini yönetmek için kullanılır
+
+Kurulum:
+  npm install -g wrangler
+
+Versiyon kontrolü:
+  wrangler --version
+  → Bu projede: wrangler 4.108.0
+
+
+2. GİRİŞ YAPMA
+--------------
+
+Wrangler ile Cloudflare hesabına giriş:
+
+  wrangler login
+
+Tarayıcı açılır, Cloudflare hesabınla giriş yaparsın.
+Ardından token yerel olarak saklanır.
+
+Giriş durumunu kontrol et:
+  wrangler whoami
+
+
+3. CLOUDFLARE PAGES PROJE OLUŞTURMA
+------------------------------------
+
+Bir kez yapılır - yeni proje oluşturur:
+
+  wrangler pages project create onlinesmmm --production-branch=master
+
+Parametreler:
+  onlinesmmm           → Proje adı (URL'de kullanılır: onlinesmmm.pages.dev)
+  --production-branch  → Hangi git branch'i production sayılacak
+
+ÇIKTI (bu projede):
+  ✨ Successfully created the 'onlinesmmm' project.
+  It will be available at https://onlinesmmm.pages.dev/ once you create
+  your first deployment.
+
+SORUN: "A project with this name already exists"
+  → İsim alınmış demek. Farklı bir isim dene.
+  → Mevcut projeye deploy etmek için sadece "wrangler pages deploy" kullan.
+
+
+4. DEPLOY ETME (DOSYA YÜKLEME)
+--------------------------------
+
+dist/ klasörünü (build edilmiş statik dosyaları) Cloudflare Pages'e yükle:
+
+  wrangler pages deploy dist --project-name=onlinesmmm --branch=master
+
+Parametreler:
+  dist                          → Yüklenecek klasör (build çıktısı)
+  --project-name=onlinesmmm    → Hangi Cloudflare Pages projesine
+  --branch=master               → Production branch
+
+ÇIKTI (bu projede):
+  Uploading... (0/32)
+  Uploading... (10/32)
+  Uploading... (21/32)
+  Uploading... (32/32)
+  ✨ Success! Uploaded 32 files (1.70 sec)
+  🌎 Deploying...
+  ✨ Deployment complete!
+  Take a peek over at https://ace64460.onlinesmmm.pages.dev
+
+Deployment URL:
+  - Production:  https://onlinesmmm.pages.dev
+  - Bu deploy:   https://ace64460.onlinesmmm.pages.dev (her deploy için benzersiz)
+
+
+5. WRANGLER.TOML DOSYASI
+-------------------------
+
+Proje kök dizinine konur. Wrangler ayarlarını belirler.
+
+BU PROJEde OLUŞTURULAN (Z:\WebProje\onlinesmmm\wrangler.toml):
+
+  name = "onlinesmmm"
+  compatibility_date = "2024-01-01"
+  pages_build_output_dir = "./dist"
+
+SORUN: "missing the pages_build_output_dir field" uyarısı
+  Wrangler.toml'da "pages_build_output_dir" alanı eksikse bu uyarı gelir.
+  Çözüm: wrangler.toml'a şunu ekle:
+    pages_build_output_dir = "./dist"
+
+  Bu uyarı olsa bile deploy çalışır (uyarı, hata değil).
+
+SORUN: "uncommitted changes" uyarısı
+  Git repo'sunda commit edilmemiş değişiklikler varsa uyarı verir.
+  Çözüm 1: Commit et:
+    git add -A && git commit -m "wrangler.toml eklendi"
+  Çözüm 2: Uyarıyı sustur (commit etmeden deploy):
+    wrangler pages deploy dist --project-name=onlinesmmm --commit-dirty=true
+
+
+6. SONRAKI DEPLOYLAR (GÜNCELLEME)
+-----------------------------------
+
+Kod değişikliği yapıp siteyi güncellemek için:
+
+  # 1. Önce build et (React/Vite projesi için)
+  npm run build
+
+  # 2. Deploy et
+  wrangler pages deploy dist --project-name=onlinesmmm
+
+  # 3. İsteğe bağlı: GitHub'a da push et
+  git add -A
+  git commit -m "güncelleme açıklaması"
+  git push
+
+
+7. CLOUDFLARE PAGES vs CLOUDFLARE WORKERS
+-------------------------------------------
+
+  Pages   → Statik site / SPA (React, Vue, HTML dosyaları) için
+  Workers → Dinamik API / server-side kod için (Node.js benzeri)
+
+  Bu proje: Frontend = Pages (dist/ klasörü)
+             Backend  = Ayrı VPS sunucu (server/ klasörü şu an CF'de değil)
+
+
+8. CLOUDFLARE PAGES ÖZELLIKLERI
+---------------------------------
+
+  - Ücretsiz plan: Sınırsız site, ayda 500 build
+  - Global CDN: Tüm dünyada hızlı erişim
+  - Otomatik HTTPS: SSL sertifikası otomatik
+  - Custom domain: Kendi domain'ini bağlayabilirsin
+  - Preview deployments: Her deploy'a özel URL
+
+Custom Domain Bağlama:
+  1. Cloudflare Dashboard → Pages → onlinesmmm
+  2. "Custom domains" sekmesi
+  3. "Set up a custom domain" butonuna tıkla
+  4. Domain'ini yaz (örn: onlinesmmm.com)
+  5. DNS ayarları otomatik yapılır (domain CF'deyse)
+
+
+9. DEPLOY LİSTESİ VE GEÇMİŞİ
+-------------------------------
+
+Mevcut projeleri listele:
+  wrangler pages project list
+
+Deployment geçmişini gör:
+  wrangler pages deployment list --project-name=onlinesmmm
+
+
+10. ÖZET KOMUT SIRASI (BU PROJEDE YAPILAN)
+--------------------------------------------
+
+  1. wrangler pages project create onlinesmmm --production-branch=master
+     → Cloudflare'de "onlinesmmm" projesi oluşturuldu
+     → URL: https://onlinesmmm.pages.dev rezerve edildi
+
+  2. wrangler pages deploy dist --project-name=onlinesmmm --branch=master
+     → 32 dosya yüklendi
+     → Deployment tamamlandı
+     → Production: https://onlinesmmm.pages.dev
+     → Deploy URL:  https://ace64460.onlinesmmm.pages.dev
+
+  3. wrangler.toml oluşturuldu:
+     name = "onlinesmmm"
+     compatibility_date = "2024-01-01"
+     pages_build_output_dir = "./dist"
+
+
+11. SIKÇA KARŞILAŞILAN SORUNLAR
+---------------------------------
+
+SORUN: "Authentication error" veya "Not logged in"
+  → wrangler login
+  → Tarayıcıda Cloudflare hesabına giriş yap
+
+SORUN: Deploy sonrası sayfa açılmıyor (404)
+  → SPA (Single Page Application) için "_redirects" dosyası gerekir
+  → dist/ klasörüne "_redirects" dosyası oluştur:
+      /* /index.html 200
+  → Tekrar deploy et
+
+SORUN: "Too many requests" veya rate limit
+  → Kısa sürede çok fazla deploy yapıldı
+  → Birkaç dakika bekle
+
+SORUN: dist/ klasörü boş veya eksik
+  → Önce "npm run build" komutunu çalıştır
+  → dist/ klasörünün oluştuğunu kontrol et
+
+SORUN: Büyük dosyalar yavaş yükleniyor
+  → Wrangler dosyaları paralel yükler, normal
+  → node_modules'i asla dist/ içine koyma
+
+SORUN: "Project not found"
+  → Proje adı yanlış: --project-name=... doğru mu?
+  → wrangler pages project list ile mevcut projeleri kontrol et
+
+
+========================================================
+  Oluşturan: Antigravity AI (Google DeepMind)
+  Proje: OnlineSMMM / GurSoft
+========================================================
