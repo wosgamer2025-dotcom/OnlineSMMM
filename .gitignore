@@ -1,0 +1,37 @@
+node_modules
+# dist - Cloudflare Pages için GitHub'da tutuyoruz
+# dist
+.env
+.env.*
+!.env.example
+playwright-report
+test-results
+scratch
+tests/playwright/**-snapshots
+_tmp
+.tmp
+server-data
+out.js
+*.rar
+*.zip
+*.tar.gz
+*.tgz
+*.log
+superadmin-credentials.txt
+coverage
+.DS_Store
+tmp-*
+*.png
+*.jpg
+*.jpeg
+# Deploy scripts (VPS specific)
+deploy-*.cjs
+upload-*.cjs
+check-*.cjs
+fix-*.cjs
+install-key.cjs
+setup-*.cjs
+restore-pwd.cjs
+set-port.cjs
+add-dns.cjs
+verify-token.cjs

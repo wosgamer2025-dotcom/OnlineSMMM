@@ -1,0 +1,49 @@
+{
+  "name": "onlinesmmm",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "dev:api": "node server/server.js",
+    "dev:full": "concurrently \"npm run dev:api\" \"npm run dev\"",
+    "build": "vite build",
+    "start": "node server/server.js",
+    "preview": "vite preview",
+    "lint": "eslint src server",
+    "test": "vitest run src server",
+    "test:playwright": "playwright test",
+    "smoke:live": "node scripts/smoke-live.mjs",
+    "check:locales": "node scripts/check-locales.mjs"
+  },
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "helmet": "^8.2.0",
+    "iyzipay": "^2.0.69",
+    "jsonwebtoken": "^9.0.3",
+    "multer": "^2.2.0",
+    "nodemailer": "^9.0.3",
+    "qrcode": "^1.5.4",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "speakeasy": "^2.0.0",
+    "ssh2": "^1.17.0",
+    "turkey-neighbourhoods": "^4.0.3",
+    "uuid": "^14.0.1",
+    "whatsapp-web.js": "^1.34.7"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.61.1",
+    "@testing-library/react": "^16.3.0",
+    "concurrently": "^10.0.3",
+    "eslint": "^9.31.0",
+    "eslint-plugin-react": "^7.37.5",
+    "globals": "^16.3.0",
+    "jsdom": "^26.1.0",
+    "vite": "^7.0.4",
+    "vitest": "^3.2.4"
+  }
+}
