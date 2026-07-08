@@ -448,13 +448,65 @@ function reportLeadSubmitVisit(leadForm, locale, source) {
   }
 }
 
+const TURKEY_PROVINCES = [
+  'Adana','Adıyaman','Afyonkarahisar','Ağrı','Amasya','Ankara','Antalya','Artvin','Aydın','Balıkesir',
+  'Bilecik','Bingöl','Bitlis','Bolu','Burdur','Bursa','Çanakkale','Çankırı','Çorum','Denizli',
+  'Diyarbakır','Edirne','Elazığ','Erzincan','Erzurum','Eskişehir','Gaziantep','Giresun','Gümüşhane','Hakkari',
+  'Hatay','Isparta','Mersin','İstanbul','İzmir','Kars','Kastamonu','Kayseri','Kırklareli','Kırşehir',
+  'Kocaeli','Konya','Kütahya','Malatya','Manisa','Kahramanmaraş','Mardin','Muğla','Muş','Nevşehir',
+  'Niğde','Ordu','Rize','Sakarya','Samsun','Siirt','Sinop','Sivas','Tekirdağ','Tokat',
+  'Trabzon','Tunceli','Şanlıurfa','Uşak','Van','Yozgat','Zonguldak','Aksaray','Bayburt','Karaman',
+  'Kırıkkale','Batman','Şırnak','Bartın','Ardahan','Iğdır','Yalova','Karabük','Kilis','Osmaniye','Düzce'
+];
+
+const fallbackProvinces = TURKEY_PROVINCES.map((name, index) => {
+  const id = String(index + 1);
+  let districts = [];
+  if (name === 'İstanbul') {
+    districts = [
+      { id: '34-1', name: 'Kadıköy', neighborhoods: [{ id: '34-1-1', name: 'Caferağa Mah.' }, { id: '34-1-2', name: 'Moda Mah.' }, { id: '34-1-3', name: 'Göztepe Mah.' }, { id: '34-1-4', name: 'Bostancı Mah.' }] },
+      { id: '34-2', name: 'Beşiktaş', neighborhoods: [{ id: '34-2-1', name: 'Bebek Mah.' }, { id: '34-2-2', name: 'Etiler Mah.' }, { id: '34-2-3', name: 'Ortaköy Mah.' }] },
+      { id: '34-3', name: 'Şişli', neighborhoods: [{ id: '34-3-1', name: 'Mecidiyeköy Mah.' }, { id: '34-3-2', name: 'Esentepe Mah.' }] },
+      { id: '34-4', name: 'Fatih', neighborhoods: [{ id: '34-4-1', name: 'Aksaray Mah.' }] },
+      { id: '34-5', name: 'Üsküdar', neighborhoods: [{ id: '34-5-1', name: 'Altunizade Mah.' }] },
+    ];
+  } else if (name === 'Ankara') {
+    districts = [
+      { id: '6-1', name: 'Çankaya', neighborhoods: [{ id: '6-1-1', name: 'Kavaklıdere Mah.' }, { id: '6-1-2', name: 'Bahçelievler Mah.' }] },
+      { id: '6-2', name: 'Keçiören', neighborhoods: [{ id: '6-2-1', name: 'Etlik Mah.' }] },
+      { id: '6-3', name: 'Yenimahalle', neighborhoods: [{ id: '6-3-1', name: 'Batıkent Mah.' }] },
+    ];
+  } else if (name === 'İzmir') {
+    districts = [
+      { id: '35-1', name: 'Konak', neighborhoods: [{ id: '35-1-1', name: 'Alsancak Mah.' }, { id: '35-1-2', name: 'Kordon Mah.' }] },
+      { id: '35-2', name: 'Bornova', neighborhoods: [{ id: '35-2-1', name: 'Ege Mah.' }] },
+      { id: '35-3', name: 'Karşıyaka', neighborhoods: [{ id: '35-3-1', name: 'Bostanlı Mah.' }] },
+    ];
+  } else if (name === 'Bursa') {
+    districts = [
+      { id: '16-1', name: 'Nilüfer', neighborhoods: [{ id: '16-1-1', name: 'Özlüce Mah.' }] },
+      { id: '16-2', name: 'Osmangazi', neighborhoods: [{ id: '16-2-1', name: 'Çekirge Mah.' }] },
+    ];
+  } else {
+    districts = [
+      { id: `${id}-d1`, name: 'Merkez', neighborhoods: [{ id: `${id}-d1-n1`, name: 'Merkez Mah.' }, { id: `${id}-d1-n2`, name: 'Cumhuriyet Mah.' }, { id: `${id}-d1-n3`, name: 'Atatürk Mah.' }] }
+    ];
+  }
+  return { id, name, districts };
+});
+
+const LOCAL_FALLBACK_CATALOG = {
+  source: { type: 'local-fallback', label: 'Yerel yedek adres kataloğu' },
+  provinces: fallbackProvinces
+};
+
 function App() {
   const initialRoute = getRouteState();
   const [currentPath, setCurrentPath] = useState(() => initialRoute.path);
   const [locale, setLocale] = useState(initialRoute.locale);
   const [settings, setSettings] = useState(() => normalizeCoreUrls(defaultSettings));
   const [draftSettings, setDraftSettings] = useState(() => normalizeCoreUrls(defaultSettings));
-  const [locationCatalog, setLocationCatalog] = useState({ source: {}, provinces: [] });
+  const [locationCatalog, setLocationCatalog] = useState(LOCAL_FALLBACK_CATALOG);
   const [locationCatalogMeta, setLocationCatalogMeta] = useState({});
   const [locationCatalogError, setLocationCatalogError] = useState('');
   const [auditLog, setAuditLog] = useState([]);

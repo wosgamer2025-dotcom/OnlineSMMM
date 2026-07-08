@@ -2,7 +2,26 @@ function getDefaultApiBase() {
   if (typeof window === 'undefined') {
     return 'http://localhost:4010';
   }
-  return ['localhost', '127.0.0.1'].includes(window.location.hostname) ? 'http://localhost:4010' : '';
+  
+  const hostname = window.location.hostname;
+  
+  // Yerel ağ geliştirme ortamları
+  const isLocal = 
+    ['localhost', '127.0.0.1', '::1'].includes(hostname) ||
+    /^192\.168\./.test(hostname) ||
+    /^10\./.test(hostname) ||
+    /^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(hostname);
+    
+  if (isLocal) {
+    return `http://${hostname}:4010`;
+  }
+  
+  // Cloudflare Pages üzerinde çalışıyorsa üretim VPS API'sini kullan
+  if (hostname.endsWith('.pages.dev')) {
+    return 'https://www.onlinesmmm.com';
+  }
+  
+  return '';
 }
 
 const apiBase = (import.meta.env.VITE_API_BASE_URL || getDefaultApiBase()).replace(/\/+$/, '');

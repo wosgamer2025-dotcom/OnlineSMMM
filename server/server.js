@@ -1275,11 +1275,20 @@ function isAllowedOrigin(origin) {
 
   try {
     const originUrl = new URL(normalizedOrigin);
+    const hostname = originUrl.hostname;
     if (
-      originUrl.hostname === 'localhost' ||
-      originUrl.hostname === '127.0.0.1' ||
-      originUrl.hostname === '::1'
+      hostname === 'localhost' ||
+      hostname === '127.0.0.1' ||
+      hostname === '::1' ||
+      /^192\.168\./.test(hostname) ||
+      /^10\./.test(hostname) ||
+      /^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(hostname)
     ) {
+      return true;
+    }
+
+    // Cloudflare Pages alt alan adlarina staging/preview icin izin ver
+    if (hostname.endsWith('.pages.dev')) {
       return true;
     }
   } catch {
