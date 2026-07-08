@@ -500,6 +500,60 @@ const LOCAL_FALLBACK_CATALOG = {
   provinces: fallbackProvinces
 };
 
+async function loadFullLocationCatalogFallback() {
+  try {
+    const { getCities, getDistrictsAndNeighbourhoodsOfEachCity } = await import('turkey-neighbourhoods');
+    
+    const normalizeText = (val) => String(val || '')
+      .normalize('NFKD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/ı/g, 'i').replace(/İ/g, 'i')
+      .replace(/ğ/g, 'g').replace(/Ğ/g, 'g')
+      .replace(/ş/g, 's').replace(/Ş/g, 's')
+      .replace(/ç/g, 'c').replace(/Ç/g, 'c')
+      .replace(/ö/g, 'o').replace(/Ö/g, 'o')
+      .replace(/ü/g, 'u').replace(/Ü/g, 'u')
+      .toLowerCase();
+
+    const slugify = (val, fallback = 'item') => {
+      const slug = normalizeText(val).replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+      return slug || fallback;
+    };
+
+    const districtsAndNeighborhoods = getDistrictsAndNeighbourhoodsOfEachCity();
+    const provinces = getCities().map((city) => {
+      const cityDistricts = districtsAndNeighborhoods[city.code] || {};
+      return {
+        id: String(city.code),
+        name: city.name,
+        districts: Object.entries(cityDistricts).map(([districtName, neighborhoods]) => {
+          const districtId = `${city.code}-${slugify(districtName)}`;
+          return {
+            id: districtId,
+            name: districtName,
+            neighborhoods: [...new Set(neighborhoods || [])].map((neighborhoodName, neighborhoodIndex) => ({
+              id: `${districtId}-${slugify(neighborhoodName, `n${neighborhoodIndex + 1}`)}`,
+              name: neighborhoodName,
+            })),
+          };
+        }),
+      };
+    });
+
+    return {
+      source: {
+        type: 'local-full-npm',
+        label: 'turkey-neighbourhoods yerel tam veri tabanı',
+        updatedAt: new Date().toISOString()
+      },
+      provinces
+    };
+  } catch (err) {
+    console.error('Yerel adres veritabanı yüklenemedi:', err);
+    return null;
+  }
+}
+
 function App() {
   const initialRoute = getRouteState();
   const [currentPath, setCurrentPath] = useState(() => initialRoute.path);
@@ -728,7 +782,12 @@ function App() {
         setLocationCatalogMeta(data?.meta || {});
         setLocationCatalogError('');
       } catch (error) {
-        setLocationCatalogError(String(error?.message || 'Adres kataloğu yüklenemedi.'));
+        setLocationCatalogError(String(error?.message || 'Adres kataloğu yüklenemedi. Tam yerel veritabanı yükleniyor...'));
+        const fullCatalog = await loadFullLocationCatalogFallback();
+        if (fullCatalog) {
+          setLocationCatalog(fullCatalog);
+          setLocationCatalogError('');
+        }
       }
     }
     fetchLocationCatalog();
