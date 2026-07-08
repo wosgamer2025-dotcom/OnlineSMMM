@@ -1777,6 +1777,91 @@ function sendCustomerWelcomeEmail(store, customer, context = {}) {
   }).then(() => ({ ok: true, queued: true, deliveryId: queued.deliveryId }));
 }
 
+function sendCustomerPaymentSuccessEmail(store, customer, payment, context = {}) {
+  const settings = getServerMailSettings(store.siteSettings || {});
+  if (!isMailConfigured(settings)) {
+    emitStructuredLog('mail_delivery', {
+      ...context,
+      delivery: 'skipped',
+      reason: 'smtp_not_configured',
+      template: 'customer_payment_success',
+      customerId: customer?.id || '',
+    }, 'warn');
+    return { ok: false, skipped: true, reason: 'smtp_not_configured' };
+  }
+
+  const startedAt = performance.now();
+  const escapedCustomerName = escapeHtml(customer.name || '');
+  const escapedAmount = escapeHtml(String(payment.amount || ''));
+  const escapedCurrency = escapeHtml(String(payment.currency || 'TRY'));
+  const escapedOrderId = escapeHtml(String(payment.orderId || '-'));
+
+  const html = `<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ödemeniz Başarıyla Alındı</title>
+</head>
+<body style="font-family: Arial, sans-serif; color: #333333; line-height: 1.6; padding: 20px;">
+  <div style="max-width: 600px; margin: 0 auto; border: 1px solid #dddddd; padding: 20px; border-radius: 8px;">
+    <h2 style="color: #4caf50; border-bottom: 2px solid #4caf50; padding-bottom: 10px;">Ödemeniz Başarıyla Alındı!</h2>
+    <p>Sayın <strong>${escapedCustomerName}</strong>,</p>
+    <p>Şirket tescil ve kuruluş hizmetleri başvurunuza ait ödeme işlemi başarıyla tamamlanmıştır.</p>
+    
+    <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+      <tr style="background-color: #f9f9f9;">
+        <th style="text-align: left; padding: 8px; border-bottom: 1px solid #ddd;">Açıklama</th>
+        <td style="padding: 8px; border-bottom: 1px solid #ddd;">Online Şirket Kuruluş Hizmeti</td>
+      </tr>
+      <tr>
+        <th style="text-align: left; padding: 8px; border-bottom: 1px solid #ddd;">Tutar</th>
+        <td style="padding: 8px; border-bottom: 1px solid #ddd;"><strong>${escapedAmount} ${escapedCurrency}</strong></td>
+      </tr>
+      <tr style="background-color: #f9f9f9;">
+        <th style="text-align: left; padding: 8px; border-bottom: 1px solid #ddd;">Sipariş / İşlem No</th>
+        <td style="padding: 8px; border-bottom: 1px solid #ddd;">${escapedOrderId}</td>
+      </tr>
+    </table>
+    
+    <p>İşlemleriniz mali müşavir ekibimiz tarafından başlatılmıştır. En kısa sürede danışmanınız sizinle iletişime geçecektir.</p>
+    <p>Sorularınız için bu e-postayı yanıtlayabilir veya doğrudan bizimle iletişime geçebilirsiniz.</p>
+    <p style="margin-top: 30px; font-size: 14px; color: #888888;">Saygılarımızla,<br><strong>OnlineSMMM Ekibi</strong></p>
+  </div>
+</body>
+</html>`;
+
+  const queued = enqueueMail(store, {
+    to: customer.email || settings.smtpUser,
+    subject: 'onlinesmmm - Ödemeniz Başarıyla Alındı!',
+    html,
+    text: htmlToPlainText(html),
+    attachments: context.attachments || [],
+  }, {
+    ...context,
+    template: 'customer_payment_success',
+    customerId: customer?.id || '',
+    recipients: 1,
+  });
+  const durationMs = observeDuration(startedAt);
+  emitStructuredLog('mail_delivery', {
+    ...context,
+    delivery: 'queued',
+    template: 'customer_payment_success',
+    customerId: customer?.id || '',
+    deliveryId: queued.deliveryId,
+    durationMs,
+  }, 'info');
+  return addAudit(store, context.actor || 'website', 'Müşteri ödeme onay e-postası kuyruğa alındı', {
+    ...context,
+    template: 'customer_payment_success',
+    customerId: customer?.id || '',
+    delivery: 'queued',
+    deliveryId: queued.deliveryId,
+    durationMs,
+  }).then(() => ({ ok: true, queued: true, deliveryId: queued.deliveryId }));
+}
+
 function generateTurkishIdentityNumber(seed = '') {
   const digits = String(seed || '').replace(/\D/g, '');
   const source = `${digits}${Date.now()}`.slice(-9).padStart(9, '1').split('').map((digit, index) => {
@@ -1958,6 +2043,14 @@ async function recordCompletedPayment(store, paymentInput) {
       });
       existingPayment.whatsappForwardedTo = operationalResult.whatsappForwardedTo || existingPayment.whatsappForwardedTo || [];
       existingPayment.emailDeliveryId = operationalResult.email?.deliveryId || existingPayment.emailDeliveryId || '';
+
+      if (nextStatus === 'completed') {
+        sendCustomerPaymentSuccessEmail(store, customer, existingPayment, {
+          actor: 'website',
+          customerId: customer.id,
+          paymentId: existingPayment.id,
+        }).catch((err) => console.error('Müşteri ödeme onay e-postası gönderilemedi:', err));
+      }
     }
     return { ok: true, payment: existingPayment, duplicate: true };
   }
@@ -2010,6 +2103,11 @@ async function recordCompletedPayment(store, paymentInput) {
       currency: payment.currency,
       orderId: payment.orderId,
     });
+    sendCustomerPaymentSuccessEmail(store, customer, payment, {
+      actor: 'website',
+      customerId: customer.id,
+      paymentId: payment.id,
+    }).catch((err) => console.error('Müşteri ödeme onay e-postası gönderilemedi:', err));
   }
 
   return { ok: true, payment };
